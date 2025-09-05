@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Expense Splitter</title>
+  <style>
+    /* Reset some defaults */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 15px;
+      background: #f9f9f9;
+      color: #333;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    input[type="text"], input[type="number"] {
+      padding: 14px;
+      font-size: 1rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      transition: border-color 0.3s ease;
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus {
+      border-color: #3498db;
+      outline: none;
+    }
+
+    button {
+      padding: 14px;
+      background: #3498db;
+      border: none;
+      color: white;
+      font-weight: 700;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    .expense-list, .results {
+      margin-top: 30px;
+      border-top: 1px solid #eee;
+      padding-top: 20px;
+    }
+
+    .expense-list h2, .results h2 {
+      color: #34495e;
+      margin-bottom: 12px;
+      font-weight: 600;
+      font-size: 1.25rem;
+    }
+
+    .expense-list ul, .results ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+    }
+
+    .expense-list li, .results li {
+      background: #f2f6fc;
+      margin-bottom: 12px;
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 1rem;
+      color: #34495e;
+      word-wrap: break-word;
+    }
+
+    .results li {
+      background: #dff0d8;
+      color: #3c763d;
+      font-weight: 600;
+    }
+
+    @media (min-width: 500px) {
+      .container {
+        padding: 30px 40px;
+      }
+    }
+
+    /* Make inputs and button full width on small devices */
+    @media (max-width: 480px) {
+      input[type="text"], input[type="number"], button {
+        width: 100%;
+        box-sizing: border-box;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Expense Splitter</h1>
+    <form id="expense-form">
+      <input type="text" id="name" placeholder="Enter name" required />
+      <input type="number" id="amount" placeholder="Enter amount" required min="0" step="0.01"/>
+      <button type="submit">Add Expense</button>
+    </form>
+
+    <div class="expense-list">
+      <h2>Expenses:</h2>
+      <ul id="expenses"></ul>
+    </div>
+
+    <div class="results">
+      <h2>Settlement:</h2>
+      <ul id="results"></ul>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('expense-form');
+    const expensesList = document.getElementById('expenses');
+    const resultsList = document.getElementById('results');
+
+    let expenses = [];
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('name').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+
+      if (!name || isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid name and a positive amount.');
+        return;
+      }
+
+      expenses.push({ name, amount });
+      updateExpenses();
+      calculateSettlement();
+
+      form.reset();
+    });
+
+    function updateExpenses() {
+      expensesList.innerHTML = '';
+      expenses.forEach((expense, i) => {
+        const li = document.createElement('li');
+        li.textContent = `${expense.name} paid ${expense.amount.toFixed(2)}`;
+        expensesList.appendChild(li);
+      });
+    }
+
+    function calculateSettlement() {
+      resultsList.innerHTML = '';
+      if (expenses.length === 0) return;
+
+      const total = expenses.reduce((acc, cur) => acc + cur.amount, 0);
+      const share = total / expenses.length;
+
+      // Calculate balance for each person (positive = owes money, negative = should get money)
+      const balances = expenses.map(exp => ({
+        name: exp.name,
+        balance: +(exp.amount - share).toFixed(2)
+      }));
+
+      const creditors = balances.filter(b => b.balance > 0).map(b => ({...b}));
+      const debtors = balances.filter(b => b.balance < 0).map(b => ({...b}));
+
+      let i = 0, j = 0;
+
+      while(i < creditors.length && j < debtors.length) {
+        const credit = creditors[i];
+        const debt = debtors[j];
+
+        const amount = Math.min(credit.balance, -debt.balance);
+        credit.balance -= amount;
+        debt.balance += amount;
+
+        const li = document.createElement('li');
+        li.textContent = `${debt.name} pays ${amount.toFixed(2)} to ${credit.name}`;
+        resultsList.appendChild(li);
+
+        if (credit.balance === 0) i++;
+        if (debt.balance === 0) j++;
+      }
+    }
+  </script>
+</body>
+</html>
